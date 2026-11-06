@@ -35,14 +35,22 @@ git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
 git push -u origin main
 ```
 
-### Step 3: Enable GitHub Pages in Repository Settings
+### Step 3: Enable GitHub Pages (Deploy from `gh-pages` Branch)
 1. On GitHub, navigate to your repository.
 2. Click **Settings** (top tab).
 3. On the left sidebar, click **Pages** (under "Code and automation").
-4. Under **Build and deployment > Source**, select:
-   👉 **GitHub Actions**
-5. That's it! GitHub will automatically trigger the deployment workflow. Within 1–2 minutes, your website will be live at:
-   `https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/`
+4. Under **Build and deployment > Source**, choose:
+   👉 **Deploy from a branch**
+5. Under **Branch**, select **`gh-pages`** and folder **`/ (root)`**, then click **Save**.
+
+The `.github/workflows/deploy.yml` workflow automatically builds the project with `.nojekyll` and publishes the static files directly to the `gh-pages` branch on every commit to `main`.
+
+### Optional: Deploy Directly from Command Line
+You can also deploy manually at any time without relying on GitHub Actions:
+```bash
+npm run deploy
+```
+This builds `/dist` and pushes it straight to the `gh-pages` branch on GitHub!
 
 ---
 

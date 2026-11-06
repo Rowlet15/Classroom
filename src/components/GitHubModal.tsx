@@ -99,12 +99,13 @@ git push -u origin main`;
           <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
             <div className="font-semibold text-slate-100 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-emerald-600/30 text-emerald-400 flex items-center justify-center text-[10px] font-mono">3</span>
-              Enable GitHub Pages Deployment
+              Enable GitHub Pages (Deploy from Branch)
             </div>
             <div className="space-y-1.5 text-[11px] text-slate-400 pl-7">
-              <div>1. Go to your repository on GitHub and click <strong className="text-slate-200">Settings</strong>.</div>
-              <div>2. Click <strong className="text-slate-200">Pages</strong> on the left menu.</div>
-              <div>3. Under <strong className="text-slate-200">Source</strong>, select <span className="text-emerald-400 font-semibold">GitHub Actions</span>.</div>
+              <div>1. In your GitHub repository, open the <strong className="text-slate-200">Settings</strong> tab.</div>
+              <div>2. Click <strong className="text-slate-200">Pages</strong> in the left sidebar.</div>
+              <div>3. Under <strong className="text-slate-200">Source</strong>, choose <strong className="text-white">Deploy from a branch</strong>.</div>
+              <div>4. Set Branch to <span className="text-emerald-400 font-semibold font-mono">gh-pages</span> and folder to <span className="text-emerald-400 font-semibold font-mono">/ (root)</span>, then click <strong className="text-slate-200">Save</strong>.</div>
             </div>
           </div>
 
@@ -112,7 +113,7 @@ git push -u origin main`;
           <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-800/40 text-[11px] text-indigo-200 flex items-center gap-2">
             <Globe className="w-4 h-4 text-indigo-400 shrink-0" />
             <span>
-              Your site will automatically build via <code className="font-mono text-white">.github/workflows/deploy.yml</code> and be published live at <code className="font-mono text-white">https://USERNAME.github.io/REPO_NAME/</code> with full relative subfolder support!
+              Your site builds with <code className="font-mono text-white">.nojekyll</code> and automatically deploys to the <code className="font-mono text-white">gh-pages</code> branch on every push!
             </span>
           </div>
         </div>

@@ -35,22 +35,29 @@ git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
 git push -u origin main
 ```
 
-### Step 3: Enable GitHub Pages (Deploy from `gh-pages` Branch)
-1. On GitHub, navigate to your repository.
-2. Click **Settings** (top tab).
-3. On the left sidebar, click **Pages** (under "Code and automation").
-4. Under **Build and deployment > Source**, choose:
+### Step 3: Enable GitHub Pages in Repository Settings
+
+In your repository on GitHub:
+1. Click the **Settings** tab.
+2. In the left sidebar, click **Pages**.
+3. Under **Build and deployment > Source**, choose:
    👉 **Deploy from a branch**
-5. Under **Branch**, select **`gh-pages`** and folder **`/ (root)`**, then click **Save**.
 
-The `.github/workflows/deploy.yml` workflow automatically builds the project with `.nojekyll` and publishes the static files directly to the `gh-pages` branch on every commit to `main`.
+Choose either method below:
 
-### Optional: Deploy Directly from Command Line
-You can also deploy manually at any time without relying on GitHub Actions:
-```bash
-npm run deploy
-```
-This builds `/dist` and pushes it straight to the `gh-pages` branch on GitHub!
+#### Method A: Deploy from `/docs` folder on `main` branch (Fastest & Guaranteed)
+- **Branch**: `main`
+- **Folder**: `/docs`
+- Click **Save**.
+*(The `/docs` directory is already pre-bundled with `.nojekyll`, all HTML5 games, and compiled assets!)*
+
+#### Method B: Deploy from `gh-pages` branch
+- **Branch**: `gh-pages`
+- **Folder**: `/ (root)`
+- Click **Save**.
+*(The `.github/workflows/deploy.yml` workflow automatically builds and pushes the static assets to `gh-pages` on every commit).*
+
+---
 
 ---
 
@@ -101,7 +108,7 @@ You can also use the in-app **"Add Custom Game"** button to add games with live 
 
 - **Tab Cloaker**: Change page title and favicon on the fly (Google Classroom, Google Docs, Google Drive, Canvas LMS, Desmos, Wikipedia).
 - **About:Blank Launcher**: Injects any game into a clean `about:blank` window, avoiding browser history logs and filter URL trackers.
-- **Panic Escape Hotkey**: Press <kbd>Esc</kbd> or <kbd>]</kbd> anywhere to immediately redirect to Google Classroom (customizable).
+- **Panic Escape Hotkey**: Press <kbd>]</kbd> or click the Emergency Exit button in the header to immediately redirect to Google Classroom (customizable).
 
 ---
 

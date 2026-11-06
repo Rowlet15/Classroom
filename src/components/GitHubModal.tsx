@@ -99,13 +99,27 @@ git push -u origin main`;
           <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
             <div className="font-semibold text-slate-100 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-emerald-600/30 text-emerald-400 flex items-center justify-center text-[10px] font-mono">3</span>
-              Enable GitHub Pages (Deploy from Branch)
+              Enable GitHub Pages (Settings → Pages)
             </div>
-            <div className="space-y-1.5 text-[11px] text-slate-400 pl-7">
-              <div>1. In your GitHub repository, open the <strong className="text-slate-200">Settings</strong> tab.</div>
-              <div>2. Click <strong className="text-slate-200">Pages</strong> in the left sidebar.</div>
-              <div>3. Under <strong className="text-slate-200">Source</strong>, choose <strong className="text-white">Deploy from a branch</strong>.</div>
-              <div>4. Set Branch to <span className="text-emerald-400 font-semibold font-mono">gh-pages</span> and folder to <span className="text-emerald-400 font-semibold font-mono">/ (root)</span>, then click <strong className="text-slate-200">Save</strong>.</div>
+            <div className="space-y-2 text-[11px] text-slate-400 pl-7">
+              <div>1. In your GitHub repository, open the <strong className="text-slate-200">Settings</strong> tab → click <strong className="text-slate-200">Pages</strong>.</div>
+              <div>2. Under <strong className="text-slate-200">Source</strong>, select <strong className="text-white">Deploy from a branch</strong>.</div>
+              <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
+                <div className="text-slate-200 font-semibold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  Option A (Instant - Pre-built /docs):
+                </div>
+                <div className="text-slate-300">
+                  Set Branch: <code className="text-emerald-400 font-mono font-bold">main</code> and Folder: <code className="text-emerald-400 font-mono font-bold">/docs</code>, then click <strong className="text-white">Save</strong>.
+                </div>
+                <div className="text-slate-200 font-semibold flex items-center gap-1.5 pt-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                  Option B (Automated - gh-pages):
+                </div>
+                <div className="text-slate-300">
+                  Set Branch: <code className="text-indigo-400 font-mono font-bold">gh-pages</code> and Folder: <code className="text-indigo-400 font-mono font-bold">/ (root)</code>, then click <strong className="text-white">Save</strong>.
+                </div>
+              </div>
             </div>
           </div>
 
@@ -113,7 +127,7 @@ git push -u origin main`;
           <div className="p-3 rounded-xl bg-indigo-950/30 border border-indigo-800/40 text-[11px] text-indigo-200 flex items-center gap-2">
             <Globe className="w-4 h-4 text-indigo-400 shrink-0" />
             <span>
-              Your site builds with <code className="font-mono text-white">.nojekyll</code> and automatically deploys to the <code className="font-mono text-white">gh-pages</code> branch on every push!
+              Both branches have <code className="font-mono text-white">.nojekyll</code> and self-contained relative assets, so your games load immediately without blank screens.
             </span>
           </div>
         </div>

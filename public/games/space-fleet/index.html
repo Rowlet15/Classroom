@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Cosmic Rebel: Starfighter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #060913;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #game-container {
+      position: relative;
+      background: #030712;
+      border: 2px solid #1f2937;
+      border-radius: 12px;
+      box-shadow: 0 0 35px rgba(239, 68, 68, 0.2);
+      overflow: hidden;
+      max-width: 95vw;
+    }
+    .hud {
+      width: 100%;
+      padding: 10px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.85);
+      border-bottom: 1px solid #1f2937;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .hud-left { display: flex; gap: 16px; }
+    .hud .score { color: #38bdf8; }
+    .hud .wave { color: #f59e0b; }
+    .hud .shield { color: #10b981; }
+    canvas {
+      display: block;
+      background: #020617;
+    }
+    #overlay {
+      position: absolute;
+      top: 40px; left: 0; right: 0; bottom: 0;
+      background: rgba(3, 7, 18, 0.85);
+      backdrop-filter: blur(5px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 10;
+    }
+    #overlay.hidden { display: none; }
+    h2 { font-size: 26px; color: #f8fafc; font-weight: 800; letter-spacing: -0.5px; text-align: center; }
+    p { font-size: 13px; color: #94a3b8; text-align: center; max-width: 290px; line-height: 1.5; }
+    .btn {
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn:hover { background: #dc2626; transform: translateY(-1px); }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div class="hud">
+      <div class="hud-left">
+        <div class="score">SCORE: <span id="score">0</span></div>
+        <div class="wave">WAVE: <span id="wave">1</span></div>
+      </div>
+      <div class="shield">SHIELD: <span id="shield">100%</span></div>
+    </div>
+    <canvas id="canvas" width="450" height="520"></canvas>
+
+    <div id="overlay">
+      <h2 id="ov-title">COSMIC REBEL</h2>
+      <p id="ov-desc">Use Left/Right (or A/D) to navigate. Space to fire laser cannons. Destroy oncoming alien fleets!</p>
+      <button class="btn" id="start-btn">LAUNCH MISSION</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const waveEl = document.getElementById('wave');
+    const shieldEl = document.getElementById('shield');
+    const overlay = document.getElementById('overlay');
+    const ovTitle = document.getElementById('ov-title');
+    const ovDesc = document.getElementById('ov-desc');
+    const startBtn = document.getElementById('start-btn');
+
+    let stars = [];
+    for (let i = 0; i < 70; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        s: Math.random() * 2 + 0.5,
+        spd: Math.random() * 2 + 0.5
+      });
+    }
+
+    let isPlaying = false;
+    let score = 0;
+    let wave = 1;
+    let player = { x: 225, y: 460, w: 32, h: 32, spd: 6, shield: 100 };
+    let lasers = [];
+    let enemies = [];
+    let enemyLasers = [];
+    let particles = [];
+    let keys = {};
+    let lastShot = 0;
+    let enemySpawnTimer = 0;
+
+    function reset() {
+      score = 0;
+      wave = 1;
+      player = { x: 225, y: 460, w: 32, h: 32, spd: 6, shield: 100 };
+      lasers = [];
+      enemies = [];
+      enemyLasers = [];
+      particles = [];
+      scoreEl.textContent = '0';
+      waveEl.textContent = '1';
+      shieldEl.textContent = '100%';
+    }
+
+    function addExplosion(x, y, color) {
+      for (let i = 0; i < 16; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 7,
+          vy: (Math.random() - 0.5) * 7,
+          r: Math.random() * 3 + 1,
+          life: 1,
+          color: color || '#f97316'
+        });
+      }
+    }
+
+    function spawnWave() {
+      const count = 4 + wave * 2;
+      for (let i = 0; i < count; i++) {
+        enemies.push({
+          x: 40 + (i % 6) * 65,
+          y: -40 - Math.floor(i / 6) * 55,
+          w: 28,
+          h: 24,
+          hp: 1 + Math.floor(wave / 2),
+          vx: (Math.random() > 0.5 ? 1 : -1) * (1.2 + wave * 0.2),
+          vy: 0.8 + wave * 0.15,
+          shootDelay: Math.random() * 120 + 60
+        });
+      }
+    }
+
+    function shoot() {
+      const now = performance.now();
+      if (now - lastShot > 160) {
+        lasers.push({ x: player.x - 10, y: player.y - 10, vy: -9, color: '#38bdf8' });
+        lasers.push({ x: player.x + 10, y: player.y - 10, vy: -9, color: '#38bdf8' });
+        lastShot = now;
+      }
+    }
+
+    function update() {
+      if (!isPlaying) return;
+
+      // Player Movement
+      if (keys['arrowleft'] || keys['a']) player.x -= player.spd;
+      if (keys['arrowright'] || keys['d']) player.x += player.spd;
+      if (keys['arrowup'] || keys['w']) player.y -= player.spd;
+      if (keys['arrowdown'] || keys['s']) player.y += player.spd;
+      if (keys[' '] || keys['space']) shoot();
+
+      player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
+      player.y = Math.max(100, Math.min(canvas.height - 30, player.y));
+
+      // Stars
+      stars.forEach(s => {
+        s.y += s.spd;
+        if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
+      });
+
+      // Player Lasers
+      for (let i = lasers.length - 1; i >= 0; i--) {
+        const l = lasers[i];
+        l.y += l.vy;
+        if (l.y < -10) { lasers.splice(i, 1); continue; }
+
+        for (let j = enemies.length - 1; j >= 0; j--) {
+          const e = enemies[j];
+          if (Math.abs(l.x - e.x) < (e.w / 2 + 3) && Math.abs(l.y - e.y) < (e.h / 2 + 5)) {
+            lasers.splice(i, 1);
+            e.hp--;
+            addExplosion(l.x, l.y, '#38bdf8');
+            if (e.hp <= 0) {
+              addExplosion(e.x, e.y, '#f59e0b');
+              enemies.splice(j, 1);
+              score += 150;
+              scoreEl.textContent = score;
+            }
+            break;
+          }
+        }
+      }
+
+      // Enemies
+      if (enemies.length === 0) {
+        wave++;
+        waveEl.textContent = wave;
+        spawnWave();
+      }
+
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        e.x += e.vx;
+        e.y += e.vy;
+
+        if (e.x < 25 || e.x > canvas.width - 25) e.vx *= -1;
+
+        e.shootDelay--;
+        if (e.shootDelay <= 0 && e.y > 0 && e.y < canvas.height - 100) {
+          enemyLasers.push({ x: e.x, y: e.y + 12, vy: 4 + wave * 0.5 });
+          e.shootDelay = Math.random() * 150 + 90;
+        }
+
+        // Crash into player
+        if (Math.hypot(player.x - e.x, player.y - e.y) < 28) {
+          player.shield -= 35;
+          addExplosion(e.x, e.y, '#ef4444');
+          enemies.splice(i, 1);
+          if (player.shield <= 0) gameOver();
+          else shieldEl.textContent = player.shield + '%';
+        }
+
+        if (e.y > canvas.height + 30) {
+          e.y = -30;
+          e.x = Math.random() * (canvas.width - 60) + 30;
+        }
+      }
+
+      // Enemy Lasers
+      for (let i = enemyLasers.length - 1; i >= 0; i--) {
+        const el = enemyLasers[i];
+        el.y += el.vy;
+        if (el.y > canvas.height + 10) { enemyLasers.splice(i, 1); continue; }
+
+        if (Math.hypot(player.x - el.x, player.y - el.y) < 20) {
+          enemyLasers.splice(i, 1);
+          player.shield -= 15;
+          addExplosion(player.x, player.y, '#ef4444');
+          if (player.shield <= 0) gameOver();
+          else shieldEl.textContent = player.shield + '%';
+        }
+      }
+
+      // Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.04;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Stars
+      ctx.fillStyle = '#cbd5e1';
+      stars.forEach(s => {
+        ctx.fillRect(s.x, s.y, s.s, s.s);
+      });
+
+      // Player Lasers
+      ctx.fillStyle = '#38bdf8';
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 8;
+      lasers.forEach(l => {
+        ctx.fillRect(l.x - 2, l.y - 8, 4, 16);
+      });
+      ctx.shadowBlur = 0;
+
+      // Enemy Lasers
+      ctx.fillStyle = '#ef4444';
+      enemyLasers.forEach(el => {
+        ctx.fillRect(el.x - 2, el.y, 4, 12);
+      });
+
+      // Enemies
+      enemies.forEach(e => {
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.moveTo(e.x, e.y + 12);
+        ctx.lineTo(e.x - 14, e.y - 12);
+        ctx.lineTo(e.x, e.y - 6);
+        ctx.lineTo(e.x + 14, e.y - 12);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(e.x, e.y - 2, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Player Ship
+      if (isPlaying) {
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y - 18);
+        ctx.lineTo(player.x - 16, player.y + 14);
+        ctx.lineTo(player.x, player.y + 8);
+        ctx.lineTo(player.x + 16, player.y + 14);
+        ctx.closePath();
+        ctx.fill();
+
+        // Wings accent
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.moveTo(player.x - 16, player.y + 14);
+        ctx.lineTo(player.x - 22, player.y + 10);
+        ctx.lineTo(player.x - 8, player.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(player.x + 16, player.y + 14);
+        ctx.lineTo(player.x + 22, player.y + 10);
+        ctx.lineTo(player.x + 8, player.y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Cockpit
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        ctx.arc(player.x, player.y - 4, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Thruster flame
+        ctx.fillStyle = Math.random() > 0.5 ? '#f97316' : '#f59e0b';
+        ctx.beginPath();
+        ctx.moveTo(player.x - 6, player.y + 12);
+        ctx.lineTo(player.x, player.y + 24 + Math.random() * 8);
+        ctx.lineTo(player.x + 6, player.y + 12);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // Particles
+      particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      });
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function startGame() {
+      reset();
+      isPlaying = true;
+      overlay.classList.add('hidden');
+      spawnWave();
+    }
+
+    function gameOver() {
+      isPlaying = false;
+      ovTitle.textContent = 'SHIP DESTROYED';
+      ovDesc.textContent = `Score: ${score} | Reached Wave: ${wave}`;
+      startBtn.textContent = 'REPAIR & RETRY';
+      overlay.classList.remove('hidden');
+    }
+
+    startBtn.addEventListener('click', startGame);
+
+    window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+    window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+    // Touch support: follow finger
+    canvas.addEventListener('touchmove', e => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      player.x = touch.clientX - rect.left;
+      player.y = touch.clientY - rect.top;
+      shoot();
+    }, { passive: false });
+
+    loop();
+  </script>
+</body>
+</html>

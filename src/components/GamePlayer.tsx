@@ -16,6 +16,7 @@ import {
 import { Game } from '../types';
 import { GameThumbnail } from './GameThumbnail';
 import { launchAboutBlank } from '../utils/cloak';
+import { resolveGameUrl } from '../utils/url';
 import { playUiClick, playFavoriteSound } from '../utils/audio';
 
 interface GamePlayerProps {
@@ -65,9 +66,11 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
     setReloadKey(prev => prev + 1);
   };
 
+  const resolvedUrl = resolveGameUrl(game.iframeUrl);
+
   const handleLaunchAboutBlank = () => {
     playUiClick();
-    const success = launchAboutBlank(game.iframeUrl, game.title);
+    const success = launchAboutBlank(resolvedUrl, game.title);
     if (!success) {
       setAboutBlankNotice(true);
       setTimeout(() => setAboutBlankNotice(false), 3500);
@@ -76,7 +79,7 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
 
   const handleOpenExternal = () => {
     playUiClick();
-    window.open(game.iframeUrl, '_blank');
+    window.open(resolvedUrl, '_blank');
   };
 
   return (
@@ -180,7 +183,7 @@ export const GamePlayer: React.FC<GamePlayerProps> = ({
         <iframe
           key={`${game.id}-${reloadKey}`}
           ref={iframeRef}
-          src={game.iframeUrl}
+          src={resolvedUrl}
           title={game.title}
           allow="autoplay; fullscreen; keyboard; gamepad"
           allowFullScreen

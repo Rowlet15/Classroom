@@ -17,7 +17,9 @@ import { GamePlayer } from './components/GamePlayer';
 import { CloakModal } from './components/CloakModal';
 import { AddGameModal } from './components/AddGameModal';
 import { JsonManagerModal } from './components/JsonManagerModal';
+import { GitHubModal } from './components/GitHubModal';
 import { initCloak, triggerPanic } from './utils/cloak';
+import { resolveGameUrl } from './utils/url';
 import {
   playUiClick,
   playGameLaunch,
@@ -26,11 +28,11 @@ import {
   initSoundPreference
 } from './utils/audio';
 
-// Fallback initial games if fetch fails
-import defaultGamesData from '../public/games.json';
+// Robust default games data module
+import { DEFAULT_GAMES } from './data/defaultGames';
 
 export default function App() {
-  const [games, setGames] = useState<Game[]>([]);
+  const [games, setGames] = useState<Game[]>(DEFAULT_GAMES);
   const [activeGame, setActiveGame] = useState<Game | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,14 +45,19 @@ export default function App() {
   const [isCloakOpen, setIsCloakOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
+  const [isGitHubOpen, setIsGitHubOpen] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize app on mount
   useEffect(() => {
     // 1. Init tab cloak and audio
-    initCloak();
-    setSoundOn(initSoundPreference());
+    try {
+      initCloak();
+      setSoundOn(initSoundPreference());
+    } catch {
+      // Ignore
+    }
 
     // 2. Load favorites & recent from localStorage
     try {
@@ -68,28 +75,31 @@ export default function App() {
       const storedCustomGames = localStorage.getItem('portal_custom_games');
       const customList: Game[] = storedCustomGames ? JSON.parse(storedCustomGames) : [];
 
-      fetch('/games.json')
-        .then(res => res.json())
+      fetch(resolveGameUrl('games.json'))
+        .then(res => {
+          if (!res.ok) throw new Error('Fetch failed');
+          return res.json();
+        })
         .then((data: Game[]) => {
-          // Merge custom games with fetched games
-          const merged = [...data, ...customList.filter(cg => !data.some(d => d.id === cg.id))];
-          setGames(merged);
+          if (Array.isArray(data) && data.length > 0) {
+            const merged = [...data, ...customList.filter(cg => !data.some(d => d.id === cg.id))];
+            setGames(merged);
+          }
         })
         .catch(() => {
-          // Fallback to imported defaultGamesData
-          const merged = [...defaultGamesData, ...customList.filter(cg => !defaultGamesData.some(d => d.id === cg.id))] as Game[];
+          const merged = [...DEFAULT_GAMES, ...customList.filter(cg => !DEFAULT_GAMES.some(d => d.id === cg.id))];
           setGames(merged);
         });
     } catch {
-      setGames(defaultGamesData as Game[]);
+      setGames(DEFAULT_GAMES);
     }
   }, []);
 
   // Global Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Emergency Panic hotkey: Escape or ']'
-      if (e.key === ']' || (e.key === 'Escape' && !isCloakOpen && !isAddOpen && !isJsonOpen && !activeGame)) {
+      // Dedicated Panic hotkey: ']'
+      if (e.key === ']') {
         triggerPanic();
       }
 
@@ -102,7 +112,7 @@ export default function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCloakOpen, isAddOpen, isJsonOpen, activeGame]);
+  }, []);
 
   // Handle Play Game
   const handlePlayGame = (game: Game) => {
@@ -115,24 +125,32 @@ export default function App() {
     );
 
     // Update recently played
-    setRecentGameIds(prev => {
-      const next = [game.id, ...prev.filter(id => id !== game.id)].slice(0, 10);
-      localStorage.setItem('portal_recent', JSON.stringify(next));
-      return next;
-    });
+    try {
+      setRecentGameIds(prev => {
+        const next = [game.id, ...prev.filter(id => id !== game.id)].slice(0, 10);
+        localStorage.setItem('portal_recent', JSON.stringify(next));
+        return next;
+      });
+    } catch {
+      // Ignore
+    }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Toggle Favorite
   const handleToggleFavorite = (gameId: string) => {
-    setFavorites(prev => {
-      const next = prev.includes(gameId)
-        ? prev.filter(id => id !== gameId)
-        : [...prev, gameId];
-      localStorage.setItem('portal_favorites', JSON.stringify(next));
-      return next;
-    });
+    try {
+      setFavorites(prev => {
+        const next = prev.includes(gameId)
+          ? prev.filter(id => id !== gameId)
+          : [...prev, gameId];
+        localStorage.setItem('portal_favorites', JSON.stringify(next));
+        return next;
+      });
+    } catch {
+      // Ignore
+    }
   };
 
   // Add Custom Game
@@ -160,8 +178,12 @@ export default function App() {
 
   // Reset to default
   const handleResetDefaults = () => {
-    localStorage.removeItem('portal_custom_games');
-    setGames(defaultGamesData as Game[]);
+    try {
+      localStorage.removeItem('portal_custom_games');
+    } catch {
+      // Ignore
+    }
+    setGames(DEFAULT_GAMES);
   };
 
   // Toggle Sound
@@ -225,6 +247,7 @@ export default function App() {
         onOpenCloakModal={() => setIsCloakOpen(true)}
         onOpenAddModal={() => setIsAddOpen(true)}
         onOpenJsonModal={() => setIsJsonOpen(true)}
+        onOpenGitHubModal={() => setIsGitHubOpen(true)}
         onResetView={() => setActiveGame(null)}
         onPanic={triggerPanic}
         soundEnabled={soundOn}
@@ -394,6 +417,15 @@ export default function App() {
             <button
               onClick={() => {
                 playUiClick();
+                setIsGitHubOpen(true);
+              }}
+              className="hover:text-slate-200 transition-colors"
+            >
+              GitHub Deploy
+            </button>
+            <button
+              onClick={() => {
+                playUiClick();
                 setIsCloakOpen(true);
               }}
               className="hover:text-slate-200 transition-colors"
@@ -441,6 +473,11 @@ export default function App() {
         games={games}
         onImportGames={handleImportGames}
         onResetDefaults={handleResetDefaults}
+      />
+
+      <GitHubModal
+        isOpen={isGitHubOpen}
+        onClose={() => setIsGitHubOpen(false)}
       />
     </div>
   );

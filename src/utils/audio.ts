@@ -22,12 +22,20 @@ export function isSoundEnabled(): boolean {
 
 export function setSoundEnabled(enabled: boolean): void {
   soundEnabled = enabled;
-  localStorage.setItem('portal_sound_enabled', enabled ? 'true' : 'false');
+  try {
+    localStorage.setItem('portal_sound_enabled', enabled ? 'true' : 'false');
+  } catch {
+    // Ignore
+  }
 }
 
 export function initSoundPreference(): boolean {
-  const saved = localStorage.getItem('portal_sound_enabled');
-  soundEnabled = saved !== 'false';
+  try {
+    const saved = localStorage.getItem('portal_sound_enabled');
+    soundEnabled = saved !== 'false';
+  } catch {
+    soundEnabled = true;
+  }
   return soundEnabled;
 }
 

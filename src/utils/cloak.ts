@@ -46,33 +46,45 @@ export const CLOAK_PRESETS: CloakPreset[] = [
 ];
 
 export function applyCloak(presetId: string): void {
-  const preset = CLOAK_PRESETS.find(p => p.id === presetId) || CLOAK_PRESETS[0];
-  document.title = preset.title;
+  try {
+    const preset = CLOAK_PRESETS.find(p => p.id === presetId) || CLOAK_PRESETS[0];
+    document.title = preset.title;
 
-  let faviconEl = document.getElementById('tab-favicon') as HTMLLinkElement | null;
-  if (!faviconEl) {
-    faviconEl = document.createElement('link');
-    faviconEl.id = 'tab-favicon';
-    faviconEl.rel = 'icon';
-    document.head.appendChild(faviconEl);
+    let faviconEl = document.getElementById('tab-favicon') as HTMLLinkElement | null;
+    if (!faviconEl) {
+      faviconEl = document.createElement('link');
+      faviconEl.id = 'tab-favicon';
+      faviconEl.rel = 'icon';
+      document.head.appendChild(faviconEl);
+    }
+
+    const encodedSvg = encodeURIComponent(preset.iconSvg.trim());
+    faviconEl.href = `data:image/svg+xml,${encodedSvg}`;
+
+    localStorage.setItem('portal_cloak_preset', preset.id);
+  } catch {
+    // Ignore storage errors in restricted contexts
   }
-
-  const encodedSvg = encodeURIComponent(preset.iconSvg.trim());
-  faviconEl.href = `data:image/svg+xml,${encodedSvg}`;
-
-  localStorage.setItem('portal_cloak_preset', preset.id);
 }
 
 export function initCloak(): void {
-  const saved = localStorage.getItem('portal_cloak_preset');
-  if (saved) {
-    applyCloak(saved);
+  try {
+    const saved = localStorage.getItem('portal_cloak_preset');
+    if (saved) {
+      applyCloak(saved);
+    }
+  } catch {
+    // Ignore
   }
 }
 
 export function triggerPanic(): void {
-  const panicUrl = localStorage.getItem('portal_panic_url') || 'https://classroom.google.com';
-  window.location.replace(panicUrl);
+  try {
+    const panicUrl = localStorage.getItem('portal_panic_url') || 'https://classroom.google.com';
+    window.location.replace(panicUrl);
+  } catch {
+    window.location.href = 'https://classroom.google.com';
+  }
 }
 
 export function launchAboutBlank(iframeUrl: string, title: string): boolean {
@@ -90,7 +102,7 @@ export function launchAboutBlank(iframeUrl: string, title: string): boolean {
     // Resolve absolute URL if relative
     const absoluteUrl = iframeUrl.startsWith('http') 
       ? iframeUrl 
-      : `${window.location.origin}${iframeUrl}`;
+      : new URL(iframeUrl, window.location.href).href;
 
     win.document.write(`
       <!DOCTYPE html>

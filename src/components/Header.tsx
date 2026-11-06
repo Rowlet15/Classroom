@@ -1,11 +1,12 @@
 import React from 'react';
-import { Shield, Plus, FileCode, Volume2, VolumeX, AlertTriangle } from 'lucide-react';
+import { Shield, Plus, FileCode, Volume2, VolumeX, AlertTriangle, GitBranch } from 'lucide-react';
 import { playUiClick } from '../utils/audio';
 
 interface HeaderProps {
   onOpenCloakModal: () => void;
   onOpenAddModal: () => void;
   onOpenJsonModal: () => void;
+  onOpenGitHubModal: () => void;
   onResetView: () => void;
   onPanic: () => void;
   soundEnabled: boolean;
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCloakModal,
   onOpenAddModal,
   onOpenJsonModal,
+  onOpenGitHubModal,
   onResetView,
   onPanic,
   soundEnabled,
@@ -85,6 +87,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Zone 3: 1 Primary Action + Utility */}
         <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => {
+              playUiClick();
+              onOpenGitHubModal();
+            }}
+            title="GitHub Pages Deployment Guide & Commands"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-lg border border-slate-800 transition-colors whitespace-nowrap shrink-0"
+          >
+            <GitBranch className="w-3.5 h-3.5 text-indigo-400" />
+            <span>GitHub</span>
+          </button>
+
           <button
             onClick={() => {
               playUiClick();

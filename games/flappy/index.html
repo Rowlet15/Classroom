@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Pixel Flight</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #090d16;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #game-container {
+      position: relative;
+      background: #0284c7;
+      border: 2px solid #0369a1;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(14, 165, 233, 0.25);
+      overflow: hidden;
+      max-width: 95vw;
+    }
+    .hud {
+      width: 100%;
+      padding: 10px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.85);
+      border-bottom: 1px solid #1e293b;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .hud .score { color: #38bdf8; }
+    .hud .high { color: #f59e0b; }
+    canvas {
+      display: block;
+      background: #075985;
+      cursor: pointer;
+    }
+    #overlay {
+      position: absolute;
+      top: 45px; left: 0; right: 0; bottom: 0;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 10;
+    }
+    #overlay.hidden { display: none; }
+    h2 { font-size: 26px; color: #f8fafc; font-weight: 800; }
+    p { font-size: 13px; color: #94a3b8; text-align: center; max-width: 280px; }
+    .btn {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #0ea5e9; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div class="hud">
+      <div class="score">SCORE: <span id="score">0</span></div>
+      <div class="high">BEST: <span id="high">0</span></div>
+    </div>
+    <canvas id="canvas" width="400" height="520"></canvas>
+
+    <div id="overlay">
+      <h2 id="ov-title">PIXEL FLIGHT</h2>
+      <p id="ov-desc">Press Space or Tap screen to flap wings. Fly through glowing energy gates without touching!</p>
+      <button class="btn" id="start-btn">TAKE FLIGHT</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const highEl = document.getElementById('high');
+    const overlay = document.getElementById('overlay');
+    const ovTitle = document.getElementById('ov-title');
+    const ovDesc = document.getElementById('ov-desc');
+    const startBtn = document.getElementById('start-btn');
+
+    let isPlaying = false;
+    let score = 0;
+    let highScore = parseInt(localStorage.getItem('flappy_best') || '0', 10);
+    highEl.textContent = highScore;
+
+    const bird = {
+      x: 80,
+      y: 250,
+      r: 14,
+      vy: 0,
+      gravity: 0.38,
+      jump: -6.5
+    };
+
+    let pipes = [];
+    let pipeTimer = 0;
+    const pipeGap = 130;
+    const pipeWidth = 52;
+    const pipeSpeed = 2.4;
+
+    function reset() {
+      score = 0;
+      scoreEl.textContent = '0';
+      bird.y = 250;
+      bird.vy = 0;
+      pipes = [];
+      pipeTimer = 0;
+    }
+
+    function flap() {
+      if (!isPlaying) return;
+      bird.vy = bird.jump;
+    }
+
+    function addPipe() {
+      const minH = 60;
+      const maxH = canvas.height - pipeGap - minH;
+      const topH = Math.floor(Math.random() * (maxH - minH)) + minH;
+      pipes.push({
+        x: canvas.width,
+        top: topH,
+        bottom: canvas.height - (topH + pipeGap),
+        passed: false
+      });
+    }
+
+    function update() {
+      if (!isPlaying) return;
+
+      bird.vy += bird.gravity;
+      bird.y += bird.vy;
+
+      // Floor / ceiling collision
+      if (bird.y + bird.r > canvas.height) {
+        gameOver();
+        return;
+      }
+      if (bird.y - bird.r < 0) {
+        bird.y = bird.r;
+        bird.vy = 0;
+      }
+
+      // Pipes
+      pipeTimer++;
+      if (pipeTimer > 95) {
+        pipeTimer = 0;
+        addPipe();
+      }
+
+      for (let i = pipes.length - 1; i >= 0; i--) {
+        const p = pipes[i];
+        p.x -= pipeSpeed;
+
+        // Collision detection
+        if (bird.x + bird.r > p.x && bird.x - bird.r < p.x + pipeWidth) {
+          if (bird.y - bird.r < p.top || bird.y + bird.r > canvas.height - p.bottom) {
+            gameOver();
+            return;
+          }
+        }
+
+        // Passed pipe
+        if (!p.passed && p.x + pipeWidth < bird.x) {
+          p.passed = true;
+          score++;
+          scoreEl.textContent = score;
+          if (score > highScore) {
+            highScore = score;
+            highEl.textContent = highScore;
+            localStorage.setItem('flappy_best', highScore);
+          }
+        }
+
+        if (p.x + pipeWidth < -20) {
+          pipes.splice(i, 1);
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Sky gradient
+      const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      sky.addColorStop(0, '#0c4a6e');
+      sky.addColorStop(1, '#0369a1');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Clouds
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.beginPath();
+      ctx.arc(80, 100, 30, 0, Math.PI * 2);
+      ctx.arc(110, 90, 40, 0, Math.PI * 2);
+      ctx.arc(140, 100, 30, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pipes
+      pipes.forEach(p => {
+        // Top pipe
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(p.x, 0, pipeWidth, p.top);
+        ctx.fillStyle = '#059669';
+        ctx.fillRect(p.x - 3, p.top - 18, pipeWidth + 6, 18);
+
+        // Bottom pipe
+        const botY = canvas.height - p.bottom;
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(p.x, botY, pipeWidth, p.bottom);
+        ctx.fillStyle = '#059669';
+        ctx.fillRect(p.x - 3, botY, pipeWidth + 6, 18);
+      });
+
+      // Bird
+      ctx.save();
+      ctx.translate(bird.x, bird.y);
+      const angle = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, bird.vy * 0.08));
+      ctx.rotate(angle);
+
+      // Body
+      ctx.fillStyle = '#facc15';
+      ctx.shadowColor = '#facc15';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, bird.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Eye
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(5, -4, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(7, -4, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Beak
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      ctx.moveTo(8, -1);
+      ctx.lineTo(16, 2);
+      ctx.lineTo(8, 5);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    function startGame() {
+      reset();
+      isPlaying = true;
+      overlay.classList.add('hidden');
+    }
+
+    function gameOver() {
+      isPlaying = false;
+      ovTitle.textContent = 'CRASHED!';
+      ovDesc.textContent = `Score: ${score} · Best: ${highScore}`;
+      startBtn.textContent = 'FLAP AGAIN';
+      overlay.classList.remove('hidden');
+    }
+
+    startBtn.addEventListener('click', startGame);
+
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === 'w') {
+        flap();
+        e.preventDefault();
+      }
+    });
+
+    canvas.addEventListener('pointerdown', e => {
+      flap();
+      e.preventDefault();
+    });
+
+    loop();
+  </script>
+</body>
+</html>
